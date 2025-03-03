@@ -11,10 +11,11 @@ import (
 	"github.com/fuzailAhmad123/test_report/lib"
 	rc "github.com/fuzailAhmad123/test_report/module/constants"
 	"github.com/fuzailAhmad123/test_report/module/model"
+	rt "github.com/fuzailAhmad123/test_report/module/report/types" //report types
 	"github.com/fuzailAhmad123/test_report/module/types"
 )
 
-func ConvertReportQueryParams(args *types.ReportRequestArgs) (*GetActivityReportArgs, error) {
+func ConvertReportQueryParams(args *types.ReportRequestArgs) (*rt.GetActivityReportArgs, error) {
 	start, err := lib.GetParsedTime(args.Start)
 	if err != nil {
 		return nil, fmt.Errorf("Start date conversion error: %v", err)
@@ -43,7 +44,7 @@ func ConvertReportQueryParams(args *types.ReportRequestArgs) (*GetActivityReport
 	}
 
 	// Return parsed values in a structured format
-	return &GetActivityReportArgs{
+	return &rt.GetActivityReportArgs{
 		Start:       start,
 		End:         end,
 		GroupBy:     groupBy,

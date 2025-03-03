@@ -1,22 +1,31 @@
-package report
+package mongosnap
 
 import (
 	"errors"
 	"fmt"
 
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
-	rc "github.com/fuzailAhmad123/test_report/module/constants"
+	rc "github.com/fuzailAhmad123/test_report/module/constants" //report constants
 	"github.com/fuzailAhmad123/test_report/module/model"
+	rt "github.com/fuzailAhmad123/test_report/module/report/types" //report types
 	"github.com/samber/lo"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func GetActivityDataFromMongo(rs *ReportService, reportArgs *GetActivityReportArgs) ([]model.ActivityReport, error) {
-	//get collection based on provided method
-	collection := rs.DefaultMongoDb.Db.Collection(model.Activity{}.TableName())
-	if rs.UseSnapActivityData {
-		collection = rs.DefaultMongoDb.Db.Collection(model.ActivitySnap{}.TableName())
-	}
+type MongoSnapRetriever struct{}
+
+func Init() rt.RetrieverI {
+	rt := MongoSnapRetriever{}
+
+	return &rt
+}
+
+func (rt *MongoSnapRetriever) GetCollectionName() string {
+	return "activities_snap"
+}
+
+func (rt *MongoSnapRetriever) GetData(rs *rt.ReportService, reportArgs *rt.GetActivityReportArgs) ([]any, error) {
+	collection := rs.DefaultMongoDb.Db.Collection(rt.GetCollectionName())
 
 	// 1. Match Stage Fields
 	matchStageFields := bson.D{
@@ -72,8 +81,14 @@ func GetActivityDataFromMongo(rs *ReportService, reportArgs *GetActivityReportAr
 		return nil, err
 	}
 
+	fmt.Println("[GetActivityLiveData] Activties from Mongodb SnapShots successfully fetched....")
+
+	return result, nil
+}
+
+func (rt *MongoSnapRetriever) ConvertToBSON(data []any) ([]model.ActivityReport, error) {
 	var activities []model.ActivityReport
-	for _, obj := range result {
+	for _, obj := range data {
 		activity := &model.ActivityReport{}
 		err := activity.ConvertBSONToModel(obj)
 		if err != nil {
@@ -83,6 +98,5 @@ func GetActivityDataFromMongo(rs *ReportService, reportArgs *GetActivityReportAr
 		activities = append(activities, *activity)
 	}
 
-	fmt.Println("[GetActivityLiveData] Activties from Mongodb successfully fetched....")
 	return activities, nil
 }
