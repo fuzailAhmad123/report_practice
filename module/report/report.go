@@ -1,59 +1,47 @@
 package report
 
 import (
-	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/fuzailAhmad123/test_report/infra/mongodb"
-	rc "github.com/fuzailAhmad123/test_report/module/constants"
-	"github.com/fuzailAhmad123/test_report/module/model"
+	rc "github.com/fuzailAhmad123/test_report/module/constants" //report constants
+	"github.com/fuzailAhmad123/test_report/module/report/retriever/clickhouse"
+	mongolive "github.com/fuzailAhmad123/test_report/module/report/retriever/mongo_live"
+	mongosnap "github.com/fuzailAhmad123/test_report/module/report/retriever/mongo_snap"
+	"github.com/fuzailAhmad123/test_report/module/report/retriever/redis"
+	rt "github.com/fuzailAhmad123/test_report/module/report/types" //report types
 	"github.com/fuzailAhmad123/test_report/module/types"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type ReportService struct {
-	MongClient          *mongodb.MongoClient
-	DefaultMongoDb      *mongodb.MongoDefaultDatabase
-	Context             context.Context
-	UseLiveActivityData bool
-	UseSnapActivityData bool
-	UseClickhouseData   bool
-}
+func NewReportService(hr *types.HTTPAPIResource, r *http.Request, isInternalRequest bool) *rt.ReportService {
+	var source = r.URL.Query().Get("source")
 
-type GetActivityReportArgs struct {
-	Start       time.Time
-	End         time.Time
-	GroupBy     []string
-	Metrics     []string
-	CampaignIds []primitive.ObjectID
-	OrgID       string
-}
-
-func NewReportService(hr *types.HTTPAPIResource, r *http.Request, isInternalRequest bool) *ReportService {
-	var useLiveActivityData, _ = strconv.ParseBool(r.URL.Query().Get("useLiveActivityData"))
-	var useSnapActivityData, _ = strconv.ParseBool(r.URL.Query().Get("useSnapActivityData"))
-	var useClickhouseData, _ = strconv.ParseBool(r.URL.Query().Get("useClickhouseData"))
+	var rr *rt.ReportRetriever
 
 	if isInternalRequest {
-		useLiveActivityData = true
+		rr = &rt.ReportRetriever{Name: rc.MONGO_LIVE, Retriever: mongolive.Init()}
+	} else if source != "" {
+		switch source {
+		case rc.CLICKHOUSE:
+			rr = &rt.ReportRetriever{Name: rc.CLICKHOUSE, Retriever: clickhouse.Init()}
+		case rc.MONGO_LIVE:
+			rr = &rt.ReportRetriever{Name: rc.MONGO_LIVE, Retriever: mongolive.Init()}
+		case rc.MONGO_SNAP:
+			rr = &rt.ReportRetriever{Name: rc.MONGO_SNAP, Retriever: mongosnap.Init()}
+		case rc.REDIS:
+			rr = &rt.ReportRetriever{Name: rc.REDIS, Retriever: redis.Init()}
+		}
 	}
 
-	return &ReportService{
-		MongClient:     hr.MongClient,
-		DefaultMongoDb: hr.DefaultMongoDb,
-		// Context:             hr.Context,
-		UseLiveActivityData: useLiveActivityData,
-		UseSnapActivityData: useSnapActivityData,
-		UseClickhouseData:   useClickhouseData,
-		// Source:              source,
+	return &rt.ReportService{
+		MongClient:      hr.MongClient,
+		DefaultMongoDb:  hr.DefaultMongoDb,
+		ReportRetriever: rr,
 	}
-
 }
 
-func GetReport(rs *ReportService, reportArgs *GetActivityReportArgs) (*types.ReportApiResponse, error) {
+func GetReport(rs *rt.ReportService, reportArgs *rt.GetActivityReportArgs) (*types.ReportApiResponse, error) {
 	//default resp
 	response := types.ReportApiResponse{
 		Success: false,
@@ -67,17 +55,24 @@ func GetReport(rs *ReportService, reportArgs *GetActivityReportArgs) (*types.Rep
 		return &response, err
 	}
 
-	var activityData []model.ActivityReport
-	var actErr error
+	//fetching retriever
+	ret := rs.ReportRetriever.Retriever
 
-	if rs.UseLiveActivityData || rs.UseSnapActivityData {
-		//fetch from mongo either "live" or from "snaps" based on provided type [handlin internally].
-		activityData, actErr = GetActivityDataFromMongo(rs, reportArgs)
-		if actErr != nil {
-			return &response, err
-		}
+	//get data
+	result, err := ret.GetData(rs, reportArgs)
+	if err != nil {
+		response.Message = err.Error()
+		response.HttpStatus = http.StatusInternalServerError
+		return &response, err
 	}
-	// TODO: update to fetch from clickhouse or redis also.
+
+	//convert data to bson
+	activityData, err := ret.ConvertToBSON(result)
+	if err != nil {
+		response.Message = err.Error()
+		response.HttpStatus = http.StatusInternalServerError
+		return &response, err
+	}
 
 	//format data and total
 	records, totals := GetFormattedReportResponse(activityData, reportArgs.Metrics)
@@ -98,7 +93,7 @@ func GetReport(rs *ReportService, reportArgs *GetActivityReportArgs) (*types.Rep
 	return &response, nil
 }
 
-func validate(start, end time.Time, groupBy []string, metrics []string, rs *ReportService) error {
+func validate(start, end time.Time, groupBy []string, metrics []string, rs *rt.ReportService) error {
 	if start.IsZero() {
 		return errors.New("start date is required")
 	}
@@ -115,8 +110,8 @@ func validate(start, end time.Time, groupBy []string, metrics []string, rs *Repo
 		return errors.New("metrics is required")
 	}
 
-	if !rs.UseLiveActivityData && !rs.UseSnapActivityData && !rs.UseClickhouseData {
-		return errors.New("provide at least one method from [useClickhouseData, useLiveActivityData, useSnapActivityData].")
+	if rs.ReportRetriever == nil {
+		return errors.New("please provide a valid [ \"source\" ] parameter.")
 	}
 
 	return nil

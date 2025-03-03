@@ -12,7 +12,8 @@ import (
 	rc "github.com/fuzailAhmad123/test_report/module/constants" //report constants
 	"github.com/fuzailAhmad123/test_report/module/model"
 	rsrvc "github.com/fuzailAhmad123/test_report/module/report" //report service
-	"github.com/fuzailAhmad123/test_report/module/types"
+	rt "github.com/fuzailAhmad123/test_report/module/report/types"
+	"github.com/fuzailAhmad123/test_report/module/types" //report types
 	"github.com/fuzailAhmad123/test_report/module/validation"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -71,7 +72,7 @@ func ActivitySnapAggregateController(rs *types.HTTPAPIResource) func(w http.Resp
 			}
 		}
 
-		reportRes, err := rsrvc.GetReport(rsrvc.NewReportService(rs, r, true), &rsrvc.GetActivityReportArgs{
+		reportRes, err := rsrvc.GetReport(rsrvc.NewReportService(rs, r, true), &rt.GetActivityReportArgs{
 			Start:       startDate,
 			End:         endDate,
 			GroupBy:     rc.ALLOWED_GROUP_BY_FOR_REPORTING,

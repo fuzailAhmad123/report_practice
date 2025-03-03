@@ -22,3 +22,9 @@ const PROJECTION_PREFIX string = "$_id."
 // allowerd values for reprting.
 var ALLOWED_GROUP_BY_FOR_REPORTING []string = []string{ORG_ID, AD_ID, DATE}
 var ALLOWED_METRICS_FOR_REPORTING []string = []string{BETS, WINS}
+
+// allowed retriver source type
+const CLICKHOUSE string = "clickhouse"
+const MONGO_LIVE string = "mongo_live"
+const MONGO_SNAP string = "mongo_snap"
+const REDIS string = "redis"
