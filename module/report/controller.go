@@ -19,19 +19,19 @@ func GetActivityReportController(rs *types.HTTPAPIResource) func(w http.Response
 
 		validationRes, validationErr := validation.ValidateGetQueryParams(r, &args)
 		if validationErr != nil {
-			lib.HandleError(validationRes.Message, validationRes.HttpStatus, w)
+			lib.HandleError(rs.Logr, validationRes.Message, validationRes.HttpStatus, w)
 			return
 		}
 
 		reportArgs, err := ConvertReportQueryParams(&args)
 		if err != nil {
-			lib.HandleError(fmt.Sprintf("Error while converting the args: %v", err), http.StatusBadRequest, w)
+			lib.HandleError(rs.Logr, fmt.Sprintf("Error while converting the args: %v", err), http.StatusBadRequest, w)
 			return
 		}
 
 		reportRes, err := GetReport(NewReportService(rs, r, false), reportArgs)
 		if err != nil {
-			lib.HandleError(reportRes.Message, reportRes.HttpStatus, w)
+			lib.HandleError(rs.Logr, reportRes.Message, reportRes.HttpStatus, w)
 			return
 		}
 

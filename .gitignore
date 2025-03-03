@@ -1,1 +1,4 @@
 .env
+
+# ignore the log files
+dev/logs/app.log

@@ -28,14 +28,14 @@ func ActivitySnapAggregateController(rs *types.HTTPAPIResource) func(w http.Resp
 
 		validationRes, validationErr := validation.ValidateRequestBody(r, &args)
 		if validationErr != nil {
-			lib.HandleError(validationRes.Message, validationRes.HttpStatus, w)
+			lib.HandleError(rs.Logr, validationRes.Message, validationRes.HttpStatus, w)
 			return
 		}
 
 		//assuming - provided date by cron which is already yesterday's date of provided date
 		createDate, err := lib.GetParsedTime(args.Date)
 		if err != nil {
-			lib.HandleError(fmt.Sprintf("Error occured while converting date"), http.StatusBadRequest, w)
+			lib.HandleError(rs.Logr, fmt.Sprintf("Error occured while converting date"), http.StatusBadRequest, w)
 			return
 		}
 
@@ -50,7 +50,7 @@ func ActivitySnapAggregateController(rs *types.HTTPAPIResource) func(w http.Resp
 
 		exists, err := model.FindOne[model.ActivitySnap](context.Background(), rs.DefaultMongoDb, existsFil, options.FindOne().SetProjection(bson.M{rc.ID: 1, rc.ORG_ID: 1}))
 		if err != nil {
-			lib.HandleError(fmt.Sprintf("Error occured while finding snaps for particular date"), http.StatusInternalServerError, w)
+			lib.HandleError(rs.Logr, fmt.Sprintf("Error occured while finding snaps for particular date"), http.StatusInternalServerError, w)
 			return
 		}
 
@@ -67,7 +67,7 @@ func ActivitySnapAggregateController(rs *types.HTTPAPIResource) func(w http.Resp
 			//delete the old snaps of that date
 			err := model.DeleteMany[model.ActivitySnap](context.Background(), rs.DefaultMongoDb, existsFil)
 			if err != nil {
-				lib.HandleError(fmt.Sprintf("Error occured while deleting snaps for particular date"), http.StatusInternalServerError, w)
+				lib.HandleError(rs.Logr, fmt.Sprintf("Error occured while deleting snaps for particular date"), http.StatusInternalServerError, w)
 				return
 			}
 		}
@@ -81,19 +81,22 @@ func ActivitySnapAggregateController(rs *types.HTTPAPIResource) func(w http.Resp
 			CampaignIds: []primitive.ObjectID{},
 		})
 		if err != nil {
-			lib.HandleError(reportRes.Message, reportRes.HttpStatus, w)
+			lib.HandleError(rs.Logr, reportRes.Message, reportRes.HttpStatus, w)
 			return
 		}
 
 		actSnapErr := CreateActivitySnapShots(rs, reportRes.Data.Report.Records, createDate)
 		if actSnapErr != nil {
-			lib.HandleError(fmt.Sprintf("Error occured while creating activity snapshot, %s", err.Error()), http.StatusInternalServerError, w)
+			lib.HandleError(rs.Logr, fmt.Sprintf("Error occured while creating activity snapshot, %s", err.Error()), http.StatusInternalServerError, w)
 			return
 		}
 
+		msg := fmt.Sprintf("Activity Snapshot created for (Date: %s) successfully", createDate.Format("2006-01-02"))
+		rs.Logr.Info(context.Background(), msg)
+
 		response := types.ApiResponse{
 			Success: true,
-			Message: fmt.Sprintf("Activity Snapshot created for (Date: %s) successfully", createDate.Format("2006-01-02")),
+			Message: msg,
 			Data:    nil,
 		}
 

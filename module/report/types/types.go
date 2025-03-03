@@ -6,6 +6,7 @@ import (
 
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
 	"github.com/fuzailAhmad123/test_report/module/model"
+	"github.com/trackier/igaming-go-utils/lib/logger"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -29,6 +30,7 @@ type ReportService struct {
 	DefaultMongoDb  *mongodb.MongoDefaultDatabase
 	Context         context.Context
 	ReportRetriever *ReportRetriever
+	Logr            *logger.CustomLogger
 }
 
 type GetActivityReportArgs struct {

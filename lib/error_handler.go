@@ -1,12 +1,16 @@
 package lib
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+
+	"github.com/trackier/igaming-go-utils/lib/logger"
 )
 
-func HandleError(err string, errorStatus int, w http.ResponseWriter) {
+func HandleError(logr *logger.CustomLogger, err string, errorStatus int, w http.ResponseWriter) {
 	if err != "" {
+		logr.Error(context.Background(), err)
 		errorRes := map[string]any{
 			"success": false,
 			"error":   err,

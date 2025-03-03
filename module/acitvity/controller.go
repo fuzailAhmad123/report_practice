@@ -19,13 +19,13 @@ func CreateActivityController(rs *types.HTTPAPIResource) func(w http.ResponseWri
 
 		validationRes, validationErr := validation.ValidateRequestBody(r, &args)
 		if validationErr != nil {
-			lib.HandleError(validationRes.Message, validationRes.HttpStatus, w)
+			lib.HandleError(rs.Logr, validationRes.Message, validationRes.HttpStatus, w)
 			return
 		}
 
 		activityRes, activityErr := CreateActivityService(rs, &args)
 		if activityErr != nil {
-			lib.HandleError(activityRes.Message, activityRes.HttpStatus, w)
+			lib.HandleError(rs.Logr, activityRes.Message, activityRes.HttpStatus, w)
 			return
 		}
 

@@ -1,7 +1,9 @@
 package report
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -38,6 +40,7 @@ func NewReportService(hr *types.HTTPAPIResource, r *http.Request, isInternalRequ
 		MongClient:      hr.MongClient,
 		DefaultMongoDb:  hr.DefaultMongoDb,
 		ReportRetriever: rr,
+		Logr:            hr.Logr,
 	}
 }
 
@@ -77,7 +80,10 @@ func GetReport(rs *rt.ReportService, reportArgs *rt.GetActivityReportArgs) (*typ
 	//format data and total
 	records, totals := GetFormattedReportResponse(activityData, reportArgs.Metrics)
 
-	response.Message = "Report fetched succcessfully"
+	msg := fmt.Sprintf("Reports fetched successfully from %s to %s", reportArgs.Start.Format("2006-01-02"), reportArgs.End.Format("2006-01-02"))
+	rs.Logr.Info(context.Background(), msg)
+
+	response.Message = msg
 	response.Data = types.ReportResponse{
 		GroupBy: reportArgs.GroupBy,
 		Metrics: reportArgs.Metrics,

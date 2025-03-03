@@ -56,7 +56,9 @@ func CreateActivityService(props *types.HTTPAPIResource, args *CreateActivityArg
 		return &response, fmt.Errorf("Internal Server Error: ", actErr)
 	}
 
-	response.Message = fmt.Sprintf("Activity created with (ID:%s) successfully!", actID.Hex())
+	mssg := fmt.Sprintf("Activity created with (ID:%s) successfully!", actID.Hex())
+	props.Logr.Info(context.Background(), mssg)
+	response.Message = fmt.Sprintf(mssg)
 	response.Data = *act
 	return &response, nil
 }

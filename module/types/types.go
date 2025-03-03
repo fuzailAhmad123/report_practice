@@ -2,12 +2,14 @@ package types
 
 import (
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
+	"github.com/trackier/igaming-go-utils/lib/logger"
 )
 
 // GENERAL: Api request and response
 type HTTPAPIResource struct {
 	DefaultMongoDb *mongodb.MongoDefaultDatabase
 	MongClient     *mongodb.MongoClient
+	Logr           *logger.CustomLogger
 	OrgId          string
 }
 
