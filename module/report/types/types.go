@@ -14,7 +14,6 @@ import (
 
 type ReportRetriever struct {
 	Name      string
-	Docs      []any
 	Retriever RetrieverI
 }
 
