@@ -10,6 +10,7 @@ import (
 	"github.com/fuzailAhmad123/test_report/lib"
 	"github.com/fuzailAhmad123/test_report/module/model"
 	"github.com/fuzailAhmad123/test_report/module/types"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -59,8 +60,16 @@ func CreateActivityService(props *types.HTTPAPIResource, args *CreateActivityArg
 
 	//insert into clickhouse.
 	actClkError := InsertIntoClickhouse(props, args, actID.Hex())
-	if actClkError != "" {
-		response.Message = actClkError
+	if actClkError != nil {
+		response.Message = actClkError.Error()
+		response.HttpStatus = http.StatusInternalServerError
+		return &response, fmt.Errorf("Internal Server Error: ", actClkError)
+	}
+
+	//insert into clickhouse.
+	actRedisError := InsertActivityInRedis(props, args, actDate, 1)
+	if actRedisError != nil {
+		response.Message = actClkError.Error()
 		response.HttpStatus = http.StatusInternalServerError
 		return &response, fmt.Errorf("Internal Server Error: ", actClkError)
 	}
@@ -72,34 +81,63 @@ func CreateActivityService(props *types.HTTPAPIResource, args *CreateActivityArg
 	return &response, nil
 }
 
-func InsertIntoClickhouse(props *types.HTTPAPIResource, args *CreateActivityArgs, actID string) string {
-	ctx := context.Background()
+func InsertIntoClickhouse(props *types.HTTPAPIResource, args *CreateActivityArgs, actID string) error {
 	tx, err := props.ClickhouseClient.Begin()
 	if err != nil {
-		props.Logr.Error(ctx, err.Error())
-		return fmt.Sprintf("failed to begin transaction: %s", err.Error())
+		return fmt.Errorf("failed to begin transaction: %s", err.Error())
 	}
 
 	// Prepare the insert statement
 	query := "INSERT INTO report_practice.activities (_id, org_id, ad_id, bets, wins, date) VALUES (?, ?, ?, ?, ?, ?)"
 	stmt, err := tx.Prepare(query)
 	if err != nil {
-		props.Logr.Error(ctx, err.Error())
-		return fmt.Sprintf("Failed to prepare statement: %s", err.Error())
+		return fmt.Errorf("Failed to prepare statement: %s", err.Error())
 	}
 
 	// Execute the insert
 	_, err = stmt.Exec(actID, args.OrgID, args.ADID, args.Bets, args.Wins, args.Date)
 	if err != nil {
-		props.Logr.Error(ctx, err.Error())
-		return fmt.Sprintf("Insert failed: %s", err.Error())
+		return fmt.Errorf("Insert failed: %s", err.Error())
 	}
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		props.Logr.Error(ctx, err.Error())
-		return fmt.Sprintf("Failed to commit transaction: %s", err.Error())
+		return fmt.Errorf("Failed to commit transaction: %s", err.Error())
 	}
 
-	return ""
+	return nil
+}
+
+func InsertActivityInRedis(props *types.HTTPAPIResource, args *CreateActivityArgs, actDate time.Time, sign float64) error {
+	//Key that will group_by all activities based on org_id and dates.
+	key := fmt.Sprintf("test_actr:%s:%s", args.OrgID, actDate.Format("2006-01-02")) //test_activity_report
+
+	fieldMapping := bson.M{
+		"bets": "b",
+		"wins": "w",
+	}
+
+	pipe := props.RedisClient.Client.Pipeline()
+
+	activitySuffix := fmt.Sprintf("%s:%s", args.ADID, actDate.Format("2006-01-02"))
+
+	if args.Bets != 0 {
+		field := fmt.Sprintf("%s:%s", fieldMapping["bets"], activitySuffix)
+		//update the value of "bets" with positive/negative sign
+		pipe.Pipeline().HIncrByFloat(context.Background(), key, field, args.Bets*sign)
+	}
+
+	if args.Wins != 0 {
+		field := fmt.Sprintf("%s:%s", fieldMapping["wins"], activitySuffix)
+		//update the value of "wins" with positive/negative sign
+		pipe.Pipeline().HIncrByFloat(context.Background(), key, field, args.Wins*sign)
+	}
+
+	// exec the pipeline
+	_, err := pipe.Exec(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error occured while storing activity in redis: %s", err.Error())
+	}
+
+	return nil
 }

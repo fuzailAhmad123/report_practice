@@ -11,7 +11,7 @@ import (
 	"github.com/fuzailAhmad123/test_report/module/report/retriever/clickhouse"
 	mongolive "github.com/fuzailAhmad123/test_report/module/report/retriever/mongo_live"
 	mongosnap "github.com/fuzailAhmad123/test_report/module/report/retriever/mongo_snap"
-	"github.com/fuzailAhmad123/test_report/module/report/retriever/redis"
+	redis "github.com/fuzailAhmad123/test_report/module/report/retriever/redis_live"
 	rt "github.com/fuzailAhmad123/test_report/module/report/types" //report types
 	"github.com/fuzailAhmad123/test_report/module/types"
 )
@@ -31,8 +31,6 @@ func NewReportService(hr *types.HTTPAPIResource, r *http.Request, isInternalRequ
 			rr = &rt.ReportRetriever{Name: rc.MONGO_LIVE, Retriever: mongolive.Init()}
 		case rc.MONGO_SNAP:
 			rr = &rt.ReportRetriever{Name: rc.MONGO_SNAP, Retriever: mongosnap.Init()}
-		case rc.REDIS:
-			rr = &rt.ReportRetriever{Name: rc.REDIS, Retriever: redis.Init()}
 		}
 	}
 
@@ -41,6 +39,7 @@ func NewReportService(hr *types.HTTPAPIResource, r *http.Request, isInternalRequ
 		DefaultMongoDb:  hr.DefaultMongoDb,
 		Logr:            hr.Logr,
 		Clickhouse:      hr.ClickhouseClient,
+		Redis:           hr.RedisClient,
 		ReportRetriever: rr,
 	}
 }
@@ -113,6 +112,13 @@ func validate(start, end time.Time, groupBy []string, metrics []string, rs *rt.R
 
 	if rs.ReportRetriever == nil {
 		return errors.New("please provide a valid [ \"source\" ] parameter.")
+	}
+
+	today := time.Now().Format("2006-01-02")
+	//if fetching live data set retriever as "Redis Retreiver" to fetch live data from redis.
+	if start.Format("2006-01-02") == today && end.Format("2006-01-02") == today {
+		rs.ReportRetriever = &rt.ReportRetriever{Name: rc.REDIS, Retriever: redis.Init()}
+		return nil
 	}
 
 	return nil

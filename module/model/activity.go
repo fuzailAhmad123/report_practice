@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	//report constants
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
+	rc "github.com/fuzailAhmad123/test_report/module/constants" //report constants
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -108,4 +108,17 @@ func ConvertToClickhouseActivityJSON(rows *sql.Rows) ([]ActivityReport, error) {
 	}
 
 	return activities, nil
+}
+
+func (ar *ActivityReport) GetField(key string) string {
+	switch key {
+	case rc.AD_ID:
+		return ar.AdID.Hex()
+	case rc.ORG_ID:
+		return ar.OrgID.Hex()
+	case rc.DATE:
+		return ar.Date
+	default:
+		return ""
+	}
 }
