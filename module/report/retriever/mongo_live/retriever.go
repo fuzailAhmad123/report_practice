@@ -24,7 +24,7 @@ func (rt *MongoLiveRetriever) GetCollectionName() string {
 	return "activities"
 }
 
-func (rt *MongoLiveRetriever) GetData(rs *rt.ReportService, reportArgs *rt.GetActivityReportArgs) ([]any, error) {
+func (rt *MongoLiveRetriever) GetData(rs *rt.ReportService, reportArgs *rt.GetActivityReportArgs) ([]model.ActivityReport, error) {
 	collection := rs.DefaultMongoDb.Db.Collection(rt.GetCollectionName())
 
 	// 1. Match Stage Fields
@@ -83,12 +83,8 @@ func (rt *MongoLiveRetriever) GetData(rs *rt.ReportService, reportArgs *rt.GetAc
 
 	fmt.Println("[GetActivityLiveData] Activties from Mongodb Live Data successfully fetched....")
 
-	return result, nil
-}
-
-func (rt *MongoLiveRetriever) ConvertToBSON(data []any) ([]model.ActivityReport, error) {
 	var activities []model.ActivityReport
-	for _, obj := range data {
+	for _, obj := range result {
 		activity := &model.ActivityReport{}
 		err := activity.ConvertBSONToModel(obj)
 		if err != nil {

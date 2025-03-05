@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	clk "github.com/fuzailAhmad123/test_report/infra/clickhouse"
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
+	"github.com/fuzailAhmad123/test_report/infra/redis"
 	"github.com/fuzailAhmad123/test_report/module"
 	"github.com/fuzailAhmad123/test_report/module/acitvity"
 	"github.com/fuzailAhmad123/test_report/module/types"
@@ -52,14 +54,34 @@ func startServer() {
 	//connection to mongodb.
 	mongoClient, mongoConnectionErr := mongodb.ConnectWithMongoDb(os.Getenv("MONGODB_URL"))
 	if mongoConnectionErr != nil {
-		fmt.Println(mongoConnectionErr)
+		msg := fmt.Sprintf("Error connecting Mongo is: %s", mongoConnectionErr.Error())
+		fmt.Println(msg)
+		logr.Error(context.Background(), msg)
+		os.Exit(1)
+	}
+
+	//connection to clickhouse
+	clickhouseClient, err := clk.NewClickhouseClient()
+	if err != nil {
+		msg := fmt.Sprintf("Error while connecting to clickhouse is:%s", err.Error())
+		fmt.Println(msg)
+		logr.Error(context.Background(), msg)
+		os.Exit(1)
+	}
+
+	// Create a new redis client.
+	redisClient, err := redis.NewRedisClient()
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	hr := &types.HTTPAPIResource{
-		DefaultMongoDb: mongoClient.NewDatabase(os.Getenv("DB_NAME")),
-		MongClient:     mongoClient,
-		Logr:           logr,
+		DefaultMongoDb:   mongoClient.NewDatabase(os.Getenv("DB_NAME")),
+		MongClient:       mongoClient,
+		ClickhouseClient: clickhouseClient,
+		RedisClient:      redisClient,
+		Logr:             logr,
 	}
 
 	//routes

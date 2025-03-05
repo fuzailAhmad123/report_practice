@@ -39,8 +39,9 @@ func NewReportService(hr *types.HTTPAPIResource, r *http.Request, isInternalRequ
 	return &rt.ReportService{
 		MongClient:      hr.MongClient,
 		DefaultMongoDb:  hr.DefaultMongoDb,
-		ReportRetriever: rr,
 		Logr:            hr.Logr,
+		Clickhouse:      hr.ClickhouseClient,
+		ReportRetriever: rr,
 	}
 }
 
@@ -62,15 +63,7 @@ func GetReport(rs *rt.ReportService, reportArgs *rt.GetActivityReportArgs) (*typ
 	ret := rs.ReportRetriever.Retriever
 
 	//get data
-	result, err := ret.GetData(rs, reportArgs)
-	if err != nil {
-		response.Message = err.Error()
-		response.HttpStatus = http.StatusInternalServerError
-		return &response, err
-	}
-
-	//convert data to bson
-	activityData, err := ret.ConvertToBSON(result)
+	activityData, err := ret.GetData(rs, reportArgs)
 	if err != nil {
 		response.Message = err.Error()
 		response.HttpStatus = http.StatusInternalServerError
@@ -83,7 +76,9 @@ func GetReport(rs *rt.ReportService, reportArgs *rt.GetActivityReportArgs) (*typ
 	msg := fmt.Sprintf("Reports fetched successfully from %s to %s", reportArgs.Start.Format("2006-01-02"), reportArgs.End.Format("2006-01-02"))
 	rs.Logr.Info(context.Background(), msg)
 
+	//set response
 	response.Message = msg
+	response.Success = true
 	response.Data = types.ReportResponse{
 		GroupBy: reportArgs.GroupBy,
 		Metrics: reportArgs.Metrics,

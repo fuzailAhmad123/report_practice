@@ -1,9 +1,12 @@
 package model
 
 import (
+	"database/sql"
+	"fmt"
 	"time"
 
-	rc "github.com/fuzailAhmad123/test_report/module/constants" //report constants
+	//report constants
+	"github.com/fuzailAhmad123/test_report/infra/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -42,15 +45,67 @@ type ActivityReport struct {
 	Date  string             `bson:"date" json:"date"`
 }
 
-func (c *ActivityReport) GetField(key string) string {
-	switch key {
-	case rc.AD_ID:
-		return c.AdID.Hex()
-	case rc.ORG_ID:
-		return c.OrgID.Hex()
-	case rc.DATE:
-		return c.Date
-	default:
-		return ""
+func ConvertToClickhouseActivityJSON(rows *sql.Rows) ([]ActivityReport, error) {
+	var activities []ActivityReport
+
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return activities, err
 	}
+
+	// Create a slice of interface{} to hold the scanned values
+	values := make([]interface{}, len(columns))
+	for i := range values {
+		var v interface{}
+		values[i] = &v
+	}
+
+	for rows.Next() {
+		// Scan the values into the interface{} slice
+		if err := rows.Scan(values...); err != nil {
+			return activities, err
+		}
+		defer func() ([]ActivityReport, error) {
+			if r := recover(); r != nil {
+				fmt.Println("ConvertToClickhouseActivityJSON:", r)
+				return activities, fmt.Errorf("error while converting ClickhouseActivity to JSON")
+			}
+			return activities, nil
+		}()
+
+		// Create a new ClickhouseActivity and populate its fields
+		a := ActivityReport{}
+		for i, col := range columns {
+			// Use type assertion to extract the value from the interface{}
+			val := *(values[i].(*interface{}))
+			if val == nil {
+				continue
+			}
+			switch col {
+			case "_id":
+				a.ID = mongodb.GetOptimisticObjectIdFromHex(val.(string))
+			case "org_id":
+				a.OrgID = mongodb.GetOptimisticObjectIdFromHex(val.(string))
+			case "ad_id":
+				a.AdID = mongodb.GetOptimisticObjectIdFromHex(val.(string))
+			case "bets":
+				a.Bets = val.(float64)
+			case "wins":
+				a.Wins = val.(float64)
+			case "date":
+				a.Date = val.(time.Time).Format("2025-03-01")
+			}
+		}
+
+		// Append the populated activity to the activities slice
+		activities = append(activities, a)
+	}
+
+	if err := rows.Err(); err != nil {
+		return activities, err
+	}
+
+	return activities, nil
 }

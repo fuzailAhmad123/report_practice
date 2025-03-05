@@ -59,7 +59,7 @@ func GetFormattedReportResponse(activityData []model.ActivityReport, metrics []s
 	var records []types.RowFormat
 	for _, ad := range activityData {
 		row := types.RowFormat{
-			ID:    ad.ID.Hex(),
+			// ID:    ad.ID.Hex(),
 			Bets:  ad.Bets,
 			Wins:  ad.Wins,
 			OrgID: ad.OrgID.Hex(),

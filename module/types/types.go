@@ -1,16 +1,21 @@
 package types
 
 import (
+	"database/sql"
+
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
+	"github.com/fuzailAhmad123/test_report/infra/redis"
 	"github.com/trackier/igaming-go-utils/lib/logger"
 )
 
 // GENERAL: Api request and response
 type HTTPAPIResource struct {
-	DefaultMongoDb *mongodb.MongoDefaultDatabase
-	MongClient     *mongodb.MongoClient
-	Logr           *logger.CustomLogger
-	OrgId          string
+	DefaultMongoDb   *mongodb.MongoDefaultDatabase
+	MongClient       *mongodb.MongoClient
+	Logr             *logger.CustomLogger
+	ClickhouseClient *sql.DB
+	RedisClient      *redis.RedisClient
+	OrgId            string
 }
 
 type ApiResponse struct {
@@ -65,7 +70,7 @@ type TotalFormat struct {
 	Value float64 `json:"value"`
 }
 
-// aggregate activity snap
+// aggregate activity snap args
 type ActivitySnapAggregateArgs struct {
 	OrgId   string `json:"org_id" validate:"required,mongoid"`
 	Date    string `json:"date" validate:"required"`
