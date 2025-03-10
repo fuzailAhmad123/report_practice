@@ -61,7 +61,7 @@ func (rt *RedisRetriever) GetData(rs *rt.ReportService, reportArgs *rt.GetActivi
 
 		//filtering based on campaigns [for org and date already filtered]
 		ad_id := keyParts[1]
-		if !lo.Contains(reportArgs.CampaignIds, mongodb.GetOptimisticObjectIdFromHex(ad_id)) {
+		if len(reportArgs.CampaignIds) > 0 && !lo.Contains(reportArgs.CampaignIds, mongodb.GetOptimisticObjectIdFromHex(ad_id)) {
 			continue
 		}
 

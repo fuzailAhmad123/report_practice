@@ -17,6 +17,7 @@ import (
 	"github.com/fuzailAhmad123/test_report/module/acitvity"
 	"github.com/fuzailAhmad123/test_report/module/types"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	"github.com/trackier/igaming-go-utils/lib/logger"
 )
@@ -86,6 +87,16 @@ func startServer() {
 
 	//routes
 	r := chi.NewRouter()
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"http://localhost:5173"},
+		// AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
 
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK!"))

@@ -95,7 +95,21 @@ func ConvertToClickhouseActivityJSON(rows *sql.Rows) ([]ActivityReport, error) {
 			case "wins":
 				a.Wins = val.(float64)
 			case "date":
-				a.Date = val.(time.Time).Format("2025-03-01")
+				switch v := val.(type) {
+				case string:
+					parsedTime, err := time.Parse("2006-01-02 15:04:05", v)
+					if err != nil {
+						fmt.Println("Error parsing date:", err)
+						continue
+					}
+					a.Date = parsedTime.Format("2006-01-02")
+
+				case time.Time:
+					a.Date = v.Format("2006-01-02")
+
+				default:
+					fmt.Println("Unexpected date format:", v)
+				}
 			}
 		}
 

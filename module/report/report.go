@@ -110,15 +110,15 @@ func validate(start, end time.Time, groupBy []string, metrics []string, rs *rt.R
 		return errors.New("metrics is required")
 	}
 
-	if rs.ReportRetriever == nil {
-		return errors.New("please provide a valid [ \"source\" ] parameter.")
-	}
-
 	today := time.Now().Format("2006-01-02")
 	//if fetching live data set retriever as "Redis Retreiver" to fetch live data from redis.
 	if start.Format("2006-01-02") == today && end.Format("2006-01-02") == today {
 		rs.ReportRetriever = &rt.ReportRetriever{Name: rc.REDIS, Retriever: redis.Init()}
 		return nil
+	}
+
+	if rs.ReportRetriever == nil {
+		return errors.New("please provide a valid [ \"source\" ] parameter.")
 	}
 
 	return nil
