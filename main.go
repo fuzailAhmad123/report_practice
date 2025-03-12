@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	bg "github.com/fuzailAhmad123/test_report/infra/bigquery"
 	clk "github.com/fuzailAhmad123/test_report/infra/clickhouse"
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
 	"github.com/fuzailAhmad123/test_report/infra/redis"
@@ -77,11 +78,21 @@ func startServer() {
 		os.Exit(1)
 	}
 
+	//Big Query Client
+	bigQueryClient, err := bg.NewBigQueryClient()
+	if err != nil {
+		msg := fmt.Sprintf("Error while connecting to bigquery is:%s", err.Error())
+		fmt.Println(msg)
+		logr.Error(context.Background(), msg)
+		os.Exit(1)
+	}
+
 	hr := &types.HTTPAPIResource{
 		DefaultMongoDb:   mongoClient.NewDatabase(os.Getenv("DB_NAME")),
 		MongClient:       mongoClient,
 		ClickhouseClient: clickhouseClient,
 		RedisClient:      redisClient,
+		BigQueryClient:   bigQueryClient,
 		Logr:             logr,
 	}
 
@@ -89,8 +100,8 @@ func startServer() {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"http://localhost:5173"},
-		// AllowedOrigins:   []string{"https://*", "http://*"},
+		// AllowedOrigins: []string{"http://localhost:5173"},
+		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -104,7 +115,6 @@ func startServer() {
 
 	//create activity route
 	r.Post("/activity", acitvity.CreateActivityController(hr))
-
 	r.Mount("/report", module.Route(hr))
 
 	logr.Info(context.Background(), "Server is listening on port "+os.Getenv("SERVER_PORT"))

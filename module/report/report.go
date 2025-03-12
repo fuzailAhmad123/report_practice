@@ -8,6 +8,7 @@ import (
 	"time"
 
 	rc "github.com/fuzailAhmad123/test_report/module/constants" //report constants
+	"github.com/fuzailAhmad123/test_report/module/report/retriever/bigquery"
 	"github.com/fuzailAhmad123/test_report/module/report/retriever/clickhouse"
 	mongolive "github.com/fuzailAhmad123/test_report/module/report/retriever/mongo_live"
 	mongosnap "github.com/fuzailAhmad123/test_report/module/report/retriever/mongo_snap"
@@ -31,6 +32,8 @@ func NewReportService(hr *types.HTTPAPIResource, r *http.Request, isInternalRequ
 			rr = &rt.ReportRetriever{Name: rc.MONGO_LIVE, Retriever: mongolive.Init()}
 		case rc.MONGO_SNAP:
 			rr = &rt.ReportRetriever{Name: rc.MONGO_SNAP, Retriever: mongosnap.Init()}
+		case rc.BIGQUERY:
+			rr = &rt.ReportRetriever{Name: rc.BIGQUERY, Retriever: bigquery.Init()}
 		}
 	}
 
@@ -40,6 +43,7 @@ func NewReportService(hr *types.HTTPAPIResource, r *http.Request, isInternalRequ
 		Logr:            hr.Logr,
 		Clickhouse:      hr.ClickhouseClient,
 		Redis:           hr.RedisClient,
+		BigQuery:        hr.BigQueryClient,
 		ReportRetriever: rr,
 	}
 }

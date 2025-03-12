@@ -27,4 +27,5 @@ var ALLOWED_METRICS_FOR_REPORTING []string = []string{BETS, WINS}
 const CLICKHOUSE string = "clickhouse"
 const MONGO_LIVE string = "mongo_live"
 const MONGO_SNAP string = "mongo_snap"
+const BIGQUERY string = "bigquery"
 const REDIS string = "redis"

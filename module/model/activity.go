@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"cloud.google.com/go/bigquery"
+	"cloud.google.com/go/civil"
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
 	rc "github.com/fuzailAhmad123/test_report/module/constants" //report constants
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"google.golang.org/api/iterator"
 )
 
 func (a Activity) TableName() string {
@@ -119,6 +122,80 @@ func ConvertToClickhouseActivityJSON(rows *sql.Rows) ([]ActivityReport, error) {
 
 	if err := rows.Err(); err != nil {
 		return activities, err
+	}
+
+	return activities, nil
+}
+
+func ConvertToBigQueryActivityJSON(iter *bigquery.RowIterator) ([]ActivityReport, error) {
+	var activities []ActivityReport
+
+	for {
+		var row map[string]bigquery.Value
+		err := iter.Next(&row)
+
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("BigQuery iteration error: %v", err)
+		}
+
+		a := ActivityReport{}
+
+		if val, ok := row["_id"].(string); ok && val != "" {
+			a.ID = mongodb.GetOptimisticObjectIdFromHex(val)
+		}
+
+		if val, ok := row["org_id"].(string); ok && val != "" {
+			a.OrgID = mongodb.GetOptimisticObjectIdFromHex(val)
+		}
+
+		if val, ok := row["ad_id"].(string); ok && val != "" {
+			a.AdID = mongodb.GetOptimisticObjectIdFromHex(val)
+		}
+
+		if val, ok := row["bets"]; ok {
+			switch v := val.(type) {
+			case int64:
+				a.Bets = float64(v)
+			case float64:
+				a.Bets = v
+			default:
+				fmt.Println("Unexpected type for bets:", v)
+			}
+		}
+
+		if val, ok := row["wins"]; ok {
+			switch v := val.(type) {
+			case int64:
+				a.Wins = float64(v)
+			case float64:
+				a.Wins = v
+			default:
+				fmt.Println("Unexpected type for wins:", v)
+			}
+		}
+
+		if val, ok := row["f0_"]; ok {
+			switch v := val.(type) {
+			case time.Time:
+				a.Date = v.Format("2006-01-02")
+			case string:
+				parsedTime, err := time.Parse("2006-01-02", v)
+				if err != nil {
+					fmt.Println("Error parsing date:", err)
+					continue
+				}
+				a.Date = parsedTime.Format("2006-01-02")
+			case civil.Date:
+				a.Date = fmt.Sprintf("%04d-%02d-%02d", v.Year, v.Month, v.Day)
+			default:
+				fmt.Println("Unexpected date format:", v)
+			}
+		}
+
+		activities = append(activities, a)
 	}
 
 	return activities, nil
