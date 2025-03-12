@@ -2,3 +2,4 @@
 
 # ignore the log files
 dev/logs/app.log
+infra/bigquery/config.json

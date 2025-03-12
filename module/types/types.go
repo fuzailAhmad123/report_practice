@@ -3,6 +3,7 @@ package types
 import (
 	"database/sql"
 
+	"github.com/fuzailAhmad123/test_report/infra/bigquery"
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
 	"github.com/fuzailAhmad123/test_report/infra/redis"
 	"github.com/trackier/igaming-go-utils/lib/logger"
@@ -15,6 +16,7 @@ type HTTPAPIResource struct {
 	Logr             *logger.CustomLogger
 	ClickhouseClient *sql.DB
 	RedisClient      *redis.RedisClient
+	BigQueryClient   *bigquery.BigQueryClient
 	OrgId            string
 }
 

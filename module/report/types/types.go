@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/fuzailAhmad123/test_report/infra/bigquery"
 	"github.com/fuzailAhmad123/test_report/infra/mongodb"
 	"github.com/fuzailAhmad123/test_report/infra/redis"
 	"github.com/fuzailAhmad123/test_report/module/model"
@@ -31,6 +32,7 @@ type ReportService struct {
 	ReportRetriever *ReportRetriever
 	Clickhouse      *sql.DB
 	Redis           *redis.RedisClient
+	BigQuery        *bigquery.BigQueryClient
 	Logr            *logger.CustomLogger
 }
 
